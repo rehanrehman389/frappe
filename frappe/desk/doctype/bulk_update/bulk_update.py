@@ -68,6 +68,32 @@ def submit_cancel_or_update_docs(doctype, docnames, action="submit", data=None, 
 		frappe.throw(_("Bulk operations only support up to 500 documents."), title=_("Too Many Documents"))
 
 
+@frappe.whitelist()
+def submit_cancel_or_update_docs_with_child_tables(
+	doctype, docnames, action="update", data=None, task_id=None
+):
+	"""Enhanced method to handle child table updates"""
+	if isinstance(docnames, str):
+		docnames = frappe.parse_json(docnames)
+
+	if len(docnames) < 20:
+		return _bulk_action_with_child_tables(doctype, docnames, action, data, task_id)
+	elif len(docnames) <= 500:
+		frappe.msgprint(_("Bulk operation is enqueued in background."), alert=True)
+		frappe.enqueue(
+			_bulk_action_with_child_tables,
+			doctype=doctype,
+			docnames=docnames,
+			action=action,
+			data=data,
+			task_id=task_id,
+			queue="short",
+			timeout=1000,
+		)
+	else:
+		frappe.throw(_("Bulk operations only support up to 500 documents."), title=_("Too Many Documents"))
+
+
 def _bulk_action(doctype, docnames, action, data, task_id=None):
 	if data:
 		data = frappe.parse_json(data)
@@ -91,6 +117,71 @@ def _bulk_action(doctype, docnames, action, data, task_id=None):
 				message = _("Cancelling {0}").format(doctype)
 			elif action == "update" and not doc.docstatus.is_cancelled():
 				doc.update(data)
+				doc.save()
+				message = _("Updating {0}").format(doctype)
+			else:
+				failed.append(docname)
+			frappe.db.commit()
+			frappe.publish_progress(
+				percent=idx / num_documents * 100,
+				title=message,
+				description=docname,
+				task_id=task_id,
+			)
+
+		except Exception:
+			failed.append(docname)
+			frappe.db.rollback()
+
+	return failed
+
+
+def _bulk_action_with_child_tables(doctype, docnames, action, data, task_id=None):
+	"""Enhanced bulk action method to handle child table updates"""
+	if data:
+		data = frappe.parse_json(data)
+
+	failed = []
+	num_documents = len(docnames)
+
+	for idx, docname in enumerate(docnames, 1):
+		doc = frappe.get_doc(doctype, docname)
+		try:
+			message = ""
+			if action == "submit" and doc.docstatus.is_draft():
+				if doc.meta.queue_in_background and not is_scheduler_inactive():
+					queue_submission(doc, action)
+					message = _("Queuing {0} for Submission").format(doctype)
+				else:
+					doc.submit()
+					message = _("Submitting {0}").format(doctype)
+			elif action == "cancel" and doc.docstatus.is_submitted():
+				doc.cancel()
+				message = _("Cancelling {0}").format(doctype)
+			elif action == "update" and not doc.docstatus.is_cancelled():
+				# Handle child table updates
+				if data and "child_table_updates" in data:
+					child_table_updates = data["child_table_updates"]
+					for child_doctype, field_updates in child_table_updates.items():
+						# Find the table field that contains this child doctype
+						table_fieldname = None
+						for field in doc.meta.get_table_fields():
+							if field.options == child_doctype:
+								table_fieldname = field.fieldname
+								break
+
+						if table_fieldname and hasattr(doc, table_fieldname):
+							child_docs = getattr(doc, table_fieldname)
+							for child_doc in child_docs:
+								for fieldname, value in field_updates.items():
+									if hasattr(child_doc, fieldname):
+										setattr(child_doc, fieldname, value)
+
+				# Handle regular field updates
+				regular_data = {k: v for k, v in data.items() if k != "child_table_updates"}
+				if regular_data:
+					doc.update(regular_data)
+
 				doc.save()
 				message = _("Updating {0}").format(doctype)
 			else:
