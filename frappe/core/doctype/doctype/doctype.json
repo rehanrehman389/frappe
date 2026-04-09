@@ -194,6 +194,7 @@
   },
   {
    "default": "0",
+   "description": "Only Administrator can modify this",
    "fieldname": "custom",
    "fieldtype": "Check",
    "label": "Custom?"
@@ -691,8 +692,7 @@
    "depends_on": "istable",
    "fieldname": "grid_page_length",
    "fieldtype": "Int",
-   "label": "Grid Page Length",
-   "non_negative": 1
+   "label": "Grid Page Length"
   },
   {
    "default": "0",
@@ -706,8 +706,7 @@
    "depends_on": "istable",
    "fieldname": "rows_threshold_for_grid_search",
    "fieldtype": "Int",
-   "label": "Rows Threshold for Grid Search",
-   "non_negative": 1
+   "label": "Rows Threshold for Grid Search"
   },
   {
    "depends_on": "email_append_to",
@@ -792,7 +791,7 @@
    "link_fieldname": "document_type"
   }
  ],
- "modified": "2025-09-23 06:48:13.555017",
+ "modified": "2026-04-09 23:44:21.165023",
  "modified_by": "Administrator",
  "module": "Core",
  "name": "DocType",
@@ -823,6 +822,7 @@
  ],
  "route": "doctype",
  "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
  "search_fields": "module",
  "show_name_in_global_search": 1,
  "sort_field": "creation",
