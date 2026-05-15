@@ -145,8 +145,10 @@ class DBTable:
 				if not current_length:
 					# case when the field is no longer a varchar
 					continue
-				current_length = current_length[0]
-				if cint(current_length) != cint(new_length):
+				current_length = cint(current_length[0])
+				if current_length != new_length:
+					if new_length > current_length:
+						continue
 					try:
 						# check for truncation
 						max_length = frappe.db.sql(

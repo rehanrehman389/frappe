@@ -1,5 +1,6 @@
 import random
 from unittest.case import skipIf
+from unittest.mock import patch
 
 import frappe
 from frappe.core.doctype.doctype.test_doctype import new_doctype
@@ -205,6 +206,16 @@ class TestDBUpdate(IntegrationTestCase):
 			f"SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'tab{test_doc.name}' AND COLUMN_NAME = '{col_name}' ",
 		)[0][0]
 		self.assertEqual(length, 64)
+
+	def test_varchar_expansion_skips_truncation_check(self):
+		doctype = new_doctype().insert()
+
+		with patch.object(frappe.db, "sql", wraps=frappe.db.sql) as sql:
+			doctype.fields[0].length = 200
+			doctype.save()
+
+		queries = (str(call.args[0]) for call in sql.call_args_list if call.args)
+		self.assertFalse(any("MAX(CHAR_LENGTH(`some_fieldname`))" in query for query in queries))
 
 
 class TestDBUpdateSanityChecks(IntegrationTestCase):
