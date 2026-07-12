@@ -7,7 +7,7 @@ import requests
 import frappe
 from frappe.api import discovery
 from frappe.installer import update_site_config
-from frappe.tests.test_api import FrappeAPITestCase, suppress_stdout
+from frappe.tests.test_api import FrappeAPITestCase, make_request, suppress_stdout
 from frappe.tests.utils import toggle_test_mode, whitelist_for_tests
 
 authorization_token = None
@@ -123,6 +123,23 @@ class TestResourceAPIV2(FrappeAPITestCase):
 		self.assertNotIn("modified_by", data)
 		self.assertNotIn("owner", data)
 		self.assertNotIn("docstatus", data)
+
+	def test_query_method_document_list_v2(self):
+		# QUERY method: filters and fields in JSON body instead of query string
+		response = make_request(
+			target=self.TEST_CLIENT.open,
+			args=(self.resource(self.DOCTYPE),),
+			kwargs={
+				"method": "QUERY",
+				"json": {"sid": self.sid, "fields": ["name", "description"], "limit": 3},
+			},
+		)
+		self.assertEqual(response.status_code, 200)
+		data = response.json["data"]
+		self.assertIsInstance(data, list)
+		self.assertGreater(len(data), 0)
+		self.assertLessEqual(len(data), 3)
+		self.assertIn("description", data[0])
 
 	def test_delete_document_v2(self):
 		doc_to_delete = choice(self.GENERATED_DOCUMENTS)

@@ -616,7 +616,7 @@ url_rules = [
 	),
 	Rule("/method/<doctype>/<method>", endpoint=handle_rpc_call),
 	# Document level APIs
-	Rule("/document/<doctype>", methods=["GET"], endpoint=document_list),
+	Rule("/document/<doctype>", methods=["GET", "QUERY"], endpoint=document_list),
 	Rule("/document/<doctype>", methods=["POST"], endpoint=create_doc),
 	Rule("/document/<doctype>/bulk_delete", methods=["POST"], endpoint=bulk_delete_docs),
 	Rule("/document/<doctype>/bulk_update", methods=["POST"], endpoint=bulk_update_docs),

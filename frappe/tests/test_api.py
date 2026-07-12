@@ -255,6 +255,27 @@ class TestResourceAPI(FrappeAPITestCase):
 		creations = [row["creation"] for row in response.json["data"]]
 		self.assertEqual(creations, sorted(creations, reverse=True))
 
+	def test_query_method_document_list_v1(self):
+		# QUERY method: filters and fields in JSON body instead of query string
+		response = make_request(
+			target=self.TEST_CLIENT.open,
+			args=(self.resource(self.DOCTYPE),),
+			kwargs={
+				"method": "QUERY",
+				"json": {
+					"sid": self.sid,
+					"fields": ["name", "description"],
+					"limit_page_length": 3,
+				},
+			},
+		)
+		self.assertEqual(response.status_code, 200)
+		data = response.json["data"]
+		self.assertIsInstance(data, list)
+		self.assertGreater(len(data), 0)
+		self.assertLessEqual(len(data), 3)
+		self.assertIn("description", data[0])
+
 	def test_create_document_v1(self):
 		data = {"description": frappe.mock("paragraph"), "sid": self.sid}
 		response = self.post(self.resource(self.DOCTYPE), data)

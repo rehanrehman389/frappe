@@ -1,5 +1,3 @@
-import json
-
 from werkzeug.routing import Rule
 
 import frappe
@@ -12,10 +10,10 @@ from frappe.utils.data import sbool
 
 def document_list(doctype: str):
 	if frappe.form_dict.get("fields"):
-		frappe.form_dict["fields"] = json.loads(frappe.form_dict["fields"])
+		frappe.form_dict["fields"] = frappe.parse_json(frappe.form_dict["fields"])
 
 	if frappe.form_dict.get("expand"):
-		frappe.form_dict["expand"] = json.loads(frappe.form_dict["expand"])
+		frappe.form_dict["expand"] = frappe.parse_json(frappe.form_dict["expand"])
 
 	# set limit of records for frappe.get_list
 	frappe.form_dict.setdefault(
@@ -144,7 +142,7 @@ def get_request_form_data():
 
 url_rules = [
 	Rule("/method/<path:method>", endpoint=handle_rpc_call),
-	Rule("/resource/<doctype>", methods=["GET"], endpoint=document_list),
+	Rule("/resource/<doctype>", methods=["GET", "QUERY"], endpoint=document_list),
 	Rule("/resource/<doctype>", methods=["POST"], endpoint=create_doc),
 	Rule("/resource/<doctype>/<path:name>/", methods=["GET"], endpoint=read_doc),
 	Rule("/resource/<doctype>/<path:name>/", methods=["PUT"], endpoint=update_doc),
